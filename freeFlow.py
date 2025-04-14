@@ -1,4 +1,12 @@
-def initialize():  
+def initialize():
+    """
+    Inicializa el tablero y los puntos a partir de un archivo de entrada.
+
+    Retorna:
+    - tablero: matriz con los números colocados en sus posiciones iniciales
+    - puntos: diccionario que agrupa las coordenadas de cada número
+    """  
+
     lineas = []
     with open("entradas\entrada2.txt", "r") as archivo:
         lineas = archivo.readlines()
@@ -21,6 +29,7 @@ def initialize():
 
         tablero[fila][columna] = numero
 
+        # Agregar la posición al diccionario de puntos
         if numero not in puntos:
             puntos[numero] = [(fila, columna)]
         else:
@@ -30,6 +39,10 @@ def initialize():
 
 
 def printTablero (tablero):
+    """
+    Imprime el estado actual del tablero en consola.
+    """
+
     print("_______________________")
     for fila in tablero:
         print("|", " ".join(map(str, fila)), "|") 
@@ -37,6 +50,10 @@ def printTablero (tablero):
     
 
 def seleccionar_numero_inicial(numeros_pendientes):
+    """
+    Solicita al jugador que seleccione un número válido aún pendiente de conexión.
+    """
+
     numero_inicial = None
 
     while numero_inicial not in numeros_pendientes:
@@ -50,9 +67,17 @@ def seleccionar_numero_inicial(numeros_pendientes):
     return numero_inicial
 
 def mover_direccion(movimientos_validos):
+    """
+    Solicita al jugador una dirección de movimiento válida entre las disponibles.
+    
+    Retorna:
+    - La dirección elegida por el jugador.
+    """
+        
     print(f"Movimientos posibles: {', '.join(movimientos_validos)}")
     direccion = input("Ingrese la dirección de movimiento: ").strip().lower()
 
+    # Validar que la dirección esté entre las opciones disponibles
     while direccion not in movimientos_validos:
         print("Dirección inválida.")
         print(f"Movimientos posibles: {', '.join(movimientos_validos)}")
@@ -61,6 +86,11 @@ def mover_direccion(movimientos_validos):
     return direccion 
 
 def verificar_movimientos_posibles(tablero, posicion_actual, posicion_anterior, numero_inicial):
+    """
+    Retorna una lista de direcciones válidas desde la posición actual,
+    evitando retroceder a la posición anterior y respetando las reglas del juego.
+    """
+    # Diccionario de direcciones posibles con su desplazamiento
     direcciones = {
         "arriba": (-1, 0),
         "abajo": (1, 0),
@@ -73,13 +103,16 @@ def verificar_movimientos_posibles(tablero, posicion_actual, posicion_anterior, 
     columnas = len(tablero[0])
     fila_actual, col_actual = posicion_actual
 
+    # Evaluar cada dirección posible
     for direccion, desplazamiento in direcciones.items():
         nueva_fila = fila_actual + desplazamiento[0]
         nueva_col = col_actual + desplazamiento[1]
 
+        # Verificar que la posicion nueva este dentro del tablero y permitir moverse a celdas vacías o con el mismo número
         if 0 <= nueva_fila < filas and 0 <= nueva_col < columnas and (tablero[nueva_fila][nueva_col] == 0 or tablero[nueva_fila][nueva_col] == numero_inicial):
             nueva_pos = (nueva_fila, nueva_col)
 
+            # Evitar retroceder a la posición anterior
             if posicion_anterior is None or nueva_pos != posicion_anterior:
                 movimientos_validos.append(direccion)
 
@@ -87,28 +120,52 @@ def verificar_movimientos_posibles(tablero, posicion_actual, posicion_anterior, 
 
 
 def validar_llegada(posicion_actual, puntos, numero_inicial):
+    """
+    Verifica si el jugador ha llegado a la segunda posición correspondiente al número seleccionado.
+
+    Retorna:
+    - True si la posición actual es la segunda coordenada del número.
+    - False en caso contrario.
+    """
+
     if posicion_actual in puntos[numero_inicial] and posicion_actual != puntos[numero_inicial][0]:
         print("¡Conexión completada para el número", numero_inicial, "!")
         return True
     return False
 
 def validar_finalizacion(tablero):
+    """
+    Verifica si el tablero está completamente lleno, sin celdas vacías.
+
+    Retorna:
+    - True si no quedan ceros en el tablero.
+    - False si aún hay al menos una celda vacía.
+    """
+        
     for fila in tablero:
         if 0 in fila:
             return False
     return True
 
 def jugar():
+    """
+    Controla el flujo principal del juego.
+    Permite seleccionar un número, moverse paso a paso y verificar la finalización del tablero.
+    """
+    # Inicializar el tablero y obtener las posiciones de los pares
     tablero, puntos = initialize()
     numeros_pendientes = list(puntos.keys())
 
+    # Ciclo principal: mientras haya números por conectar
     while numeros_pendientes:
         printTablero(tablero)
         numero_inicial = seleccionar_numero_inicial(numeros_pendientes)
         posicion_actual = puntos[numero_inicial][0]
         posicion_anterior = None
 
+        # Ciclo de movimientos para el número seleccionado
         while True:
+            # Obtener las direcciones posibles desde la posición actual
             movimientos_validos = verificar_movimientos_posibles(tablero, posicion_actual, posicion_anterior, numero_inicial)
 
             if not movimientos_validos:
@@ -116,7 +173,8 @@ def jugar():
                 break
             printTablero(tablero)
             direccion = mover_direccion(movimientos_validos)
-
+            
+            # Calcular la nueva posición según la dirección elegida
             if direccion == "arriba":
                 nueva_pos = (posicion_actual[0] - 1, posicion_actual[1])
             elif direccion == "abajo":
@@ -126,14 +184,21 @@ def jugar():
             elif direccion == "derecha":
                 nueva_pos = (posicion_actual[0], posicion_actual[1] + 1)
 
+            # Marcar el número en el tablero
             tablero[nueva_pos[0]][nueva_pos[1]] = numero_inicial
 
+            # Verificar si se llegó a la segunda posición del número
             if validar_llegada(nueva_pos, puntos, numero_inicial):
                 numeros_pendientes.remove(numero_inicial)
                 break
-
+            
+            # Actualizar posiciones para el siguiente paso
             posicion_anterior = posicion_actual
             posicion_actual = nueva_pos
+
+    # Evaluar si realmente se completó todo el tablero
+    if not validar_finalizacion(tablero):
+        print("Pese a que conectaste todos los numeros posibles, no pudiste completar todos los caminos. Intenta de nuevo.")
 
     print("¡Felicidades! Has completado todos los caminos.")
 
