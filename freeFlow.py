@@ -8,7 +8,7 @@ def initialize():
     """  
 
     lineas = []
-    with open("entradas\entrada2.txt", "r") as archivo:
+    with open("entradas\entrada.txt", "r") as archivo:
         lineas = archivo.readlines()
 
     # Obtener el tamaño del tablero
@@ -38,17 +38,23 @@ def initialize():
     return tablero, puntos
 
 
-def printTablero (tablero):
+def printTablero(tablero, posicion_actual=None):
     """
-    Imprime el estado actual del tablero en consola.
+    Imprime el estado actual del tablero, resaltando la posición del jugador si se proporciona.
     """
+    RESET = "\033[0m"
+    HIGHLIGHT = "\033[1;37;41m"  # texto blanco brillante, fondo rojo
 
     print("_______________________")
-    for fila in tablero:
-        print("|", " ".join(map(str, fila)), "|") 
+    for i, fila in enumerate(tablero):
+        print("|", end=" ")
+        for j, valor in enumerate(fila):
+            if (i, j) == posicion_actual:
+                print(f"{HIGHLIGHT}{valor}{RESET}", end="  ")
+            else:
+                print(f"{valor}", end="  ")
+        print("|")
     print("_______________________")
-    
-
 def seleccionar_numero_inicial(numeros_pendientes):
     """
     Solicita al jugador que seleccione un número válido aún pendiente de conexión.
@@ -73,14 +79,15 @@ def mover_direccion(movimientos_validos):
     Retorna:
     - La dirección elegida por el jugador.
     """
-        
-    print(f"Movimientos posibles: {', '.join(movimientos_validos)}")
+    movimientos_validos_con_reinicio = movimientos_validos + ["reiniciar"]
+    
+    print(f"Movimientos posibles: {', '.join(movimientos_validos)} (o escribe 'reiniciar')")
     direccion = input("Ingrese la dirección de movimiento: ").strip().lower()
 
     # Validar que la dirección esté entre las opciones disponibles
-    while direccion not in movimientos_validos:
+    while direccion not in movimientos_validos_con_reinicio:
         print("Dirección inválida.")
-        print(f"Movimientos posibles: {', '.join(movimientos_validos)}")
+        print(f"Movimientos posibles: {', '.join(movimientos_validos)} (o escribe 'reiniciar')")
         direccion = input("Ingrese la dirección de movimiento: ").strip().lower()
 
     return direccion 
@@ -155,10 +162,11 @@ def jugar():
     # Inicializar el tablero y obtener las posiciones de los pares
     tablero, puntos = initialize()
     numeros_pendientes = list(puntos.keys())
+    trazo_actual = []
 
     # Ciclo principal: mientras haya números por conectar
     while numeros_pendientes:
-        printTablero(tablero)
+        printTablero(tablero, posicion_actual=None)
         numero_inicial = seleccionar_numero_inicial(numeros_pendientes)
         posicion_actual = puntos[numero_inicial][0]
         posicion_anterior = None
@@ -171,9 +179,19 @@ def jugar():
             if not movimientos_validos:
                 print("No hay movimientos válidos. Termina este intento.")
                 break
-            printTablero(tablero)
+            printTablero(tablero, posicion_actual)
             direccion = mover_direccion(movimientos_validos)
             
+            if direccion == "reiniciar":
+                for fila, col in trazo_actual:
+                    if (fila, col) not in puntos[numero_inicial] and tablero[fila][col] == numero_inicial:
+                        tablero[fila][col] = 0
+                print("Se reinició el trazo para el número", numero_inicial)
+                posicion_actual = puntos[numero_inicial][0]
+                posicion_anterior = None
+                trazo_actual = []
+                continue
+
             # Calcular la nueva posición según la dirección elegida
             if direccion == "arriba":
                 nueva_pos = (posicion_actual[0] - 1, posicion_actual[1])
@@ -186,6 +204,7 @@ def jugar():
 
             # Marcar el número en el tablero
             tablero[nueva_pos[0]][nueva_pos[1]] = numero_inicial
+            trazo_actual.append(nueva_pos) 
 
             # Verificar si se llegó a la segunda posición del número
             if validar_llegada(nueva_pos, puntos, numero_inicial):
